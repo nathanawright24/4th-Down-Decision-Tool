@@ -1,2 +1,8 @@
-Flask==2.3.3
-Flask
+flask
+flask-cors
+joblib
+pandas
+numpy
+scikit-learn
+xgboost
+nfl_data_py
