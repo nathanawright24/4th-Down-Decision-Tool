@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4th Down Decision Tool</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Column: Input Controls -->
+        <div class="input-panel">
+            <div class="input-group">
+                <label for="current-yardline">Current Yardline</label>
+                <input type="number" id="current-yardline" value="50" min="1" max="50">
+            </div>
+            
+            <div class="input-group">
+                <label>Ball Side</label>
+                <div class="ball-side-buttons">
+                    <button type="button" class="ball-side-btn active" data-side="own">Own</button>
+                    <button type="button" class="ball-side-btn" data-side="opponent">Opponent</button>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="yards-to-go">Yards To Go</label>
+                <input type="number" id="yards-to-go" value="4" min="1" max="99">
+            </div>
+            
+            <div class="input-group">
+                <label>Quarter</label>
+                <div class="quarter-buttons">
+                    <button type="button" class="quarter-btn" data-quarter="1">1st</button>
+                    <button type="button" class="quarter-btn" data-quarter="2">2nd</button>
+                    <button type="button" class="quarter-btn active" data-quarter="3">3rd</button>
+                    <button type="button" class="quarter-btn" data-quarter="4">4th</button>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="time-remaining">Time Remaining in Quarter</label>
+                <input type="text" id="time-remaining" value="8:00" placeholder="MM:SS">
+            </div>
+            
+            <div class="input-group">
+                <label for="score-differential">Score Differential</label>
+                <input type="number" id="score-differential" value="-3" min="-50" max="50" placeholder="Points behind/ahead">
+            </div>
+            
+            <div class="input-group">
+                <label for="kicker-range">Kicker Range</label>
+                <div class="slider-container">
+                    <input type="range" id="kicker-range" min="20" max="70" value="45" class="slider">
+                    <span class="slider-value" id="kicker-value">45</span>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="punter-range">Punter Range</label>
+                <div class="slider-container">
+                    <input type="range" id="punter-range" min="30" max="80" value="50" class="slider">
+                    <span class="slider-value" id="punter-value">50</span>
+                </div>
+            </div>
+            
+            <button id="calculate-btn" class="calculate-btn">CALCULATE</button>
+        </div>
+        
+        <!-- Right Column: Decision Analysis -->
+        <div class="results-panel">
+            <div class="decision-sections">
+                <!-- Go Section -->
+                <div class="decision-section">
+                <div class="decision-content">
+                    <h3>Go</h3>
+                    <div class="formula">EPAs * Success% - EPAf = WPA</div>
+                    <div class="probabilities">
+                        <div class="prob-item">Δ TD prob.: <span id="go-td-prob">+25.8%</span></div>
+                        <div class="prob-item">Δ FG prob.: <span id="go-fg-prob">-0.2%</span></div>
+                        <div class="prob-item">Δ No score prob.: <span id="go-noscore-prob">-24.8%</span></div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="go-chart" width="100" height="100"></canvas>
+                    <div class="chart-value" id="go-value">+7.6%</div>
+                </div>
+            </div>
+            
+            <!-- FG Section -->
+            <div class="decision-section">
+                <div class="decision-content">
+                    <h3>FG</h3>
+                    <div class="formula">EPAs * Success% - EPAf = WPA</div>
+                    <div class="probabilities">
+                        <div class="prob-item">Δ TD prob.: <span id="fg-td-prob">-13.6%</span></div>
+                        <div class="prob-item">Δ FG prob.: <span id="fg-fg-prob">+32.2%</span></div>
+                        <div class="prob-item">Δ No score prob.: <span id="fg-noscore-prob">-18.44%</span></div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="fg-chart" width="100" height="100"></canvas>
+                    <div class="chart-value" id="fg-value">+5.3%</div>
+                </div>
+            </div>
+            
+            <!-- Punt Section -->
+            <div class="decision-section">
+                <div class="decision-content">
+                    <h3>Punt</h3>
+                    <div class="probabilities">
+                        <div class="prob-item">Δ netTD% <span id="punt-net-td">-21.8%</span></div>
+                        <div class="prob-item">Δ Score%: <span id="punt-score">+3.7%</span></div>
+                        <div class="prob-item">Δ Win%: <span id="punt-win">+2.5%</span></div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="punt-chart" width="100" height="100"></canvas>
+                    <div class="chart-value" id="punt-value">+2.5%</div>
+                </div>
+            </div>
+            </div>
+            
+            <!-- Recommendation Section -->
+            <div class="recommendation-section">
+                <h3>Recommendation</h3>
+                <div class="recommendation-box">
+                    <div class="recommendation-decision" id="recommendation-decision">Go</div>
+                    <div class="recommendation-wpa" id="recommendation-wpa">+7.6% WPA</div>
+                    <div class="recommendation-win" id="recommendation-win">+7.6% Δ Win%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
