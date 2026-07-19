@@ -32,7 +32,7 @@ XGB_PARAMS is the tuned XGBoost used for the win probability model, chosen by a
 5-fold CV bake-off. GO_FEATURES drive the conversion model. WP_FEATURES drive
 the win probability model, which the app evaluates at each resulting game state.
 """
-SEASONS = [2021, 2022, 2023, 2024, 2025]
+SEASONS = [2018, 2019, 2021, 2022, 2023, 2024, 2025]
 SEASON_TYPE = "REG"
 KICKER_ANCHOR = 65
 FG_MIN_DIST, FG_MAX_DIST = 18, 70
