@@ -239,7 +239,10 @@ app.layout = html.Div(className="wrap", children=[
             dcc.RadioItems(id="metric", value="epa", className="seg", inline=True,
                            options=[{"label": "Expected points", "value": "epa"},
                                     {"label": "Win probability", "value": "wpa"}])]),
-        html.Div("EPA is scoreboard points; WPA is change in win probability.", className="cap")]),
+        html.Div("Expected points is the reliable default and matches public "
+                 "fourth-down charts. Win probability is most useful late in a "
+                 "close game; earlier on it is nearly flat and tends to play it "
+                 "safe, so lean on expected points there.", className="cap")]),
     html.Div(id="banner", className="banner"),
     html.Div(id="cards", className="cards"),
     html.Div(className="foot", children=[

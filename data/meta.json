@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-07-19T18:22:37+00:00",
+  "generated_utc": "2026-07-19T20:14:54+00:00",
   "seasons": [
     2021,
     2022,
@@ -16,20 +16,16 @@
     "yardline_100",
     "score_differential"
   ],
+  "wp_features": [
+    "yardline_100",
+    "score_differential",
+    "game_seconds_remaining",
+    "half_seconds_remaining"
+  ],
   "counts": {
     "go": 5259,
     "punt": 10520,
     "fg": 5352,
     "firsts": 75831
-  },
-  "regressors": {
-    "wpa_success": {
-      "model": "XGB_tuned",
-      "cv_r2": 0.6086727261543274
-    },
-    "wpa_fail": {
-      "model": "XGB_tuned",
-      "cv_r2": 0.10709351301193237
-    }
   }
 }

@@ -28,10 +28,9 @@ from xgboost import XGBRegressor
 """
 SEASONS is the one line to edit when folding in a new year. KICKER_ANCHOR is the
 league reference max FG distance (yd) the accuracy curve is scaled against.
-XGB_PARAMS is the tuned XGBoost chosen by a 5-fold CV bake-off against Linear,
-Ridge, Lasso, KNN, RandomForest and HistGBM: it won or tied on every EPA/WPA
-target while serialising to ~60 KB, keeping the deploy under the free-tier
-memory limit. RFECV retained all five GO_FEATURES, so none are dropped.
+XGB_PARAMS is the tuned XGBoost used for the win probability model, chosen by a
+5-fold CV bake-off. GO_FEATURES drive the conversion model. WP_FEATURES drive
+the win probability model, which the app evaluates at each resulting game state.
 """
 SEASONS = [2021, 2022, 2023, 2024, 2025]
 SEASON_TYPE = "REG"
@@ -45,15 +44,12 @@ DATA_DIR = ROOT / "data"
 GO_FEATURES = ["ydstogo", "qtr", "half_seconds_remaining",
                "yardline_100", "score_differential"]
 
+WP_FEATURES = ["yardline_100", "score_differential",
+               "game_seconds_remaining", "half_seconds_remaining"]
+
 XGB_PARAMS = dict(n_estimators=300, max_depth=3, learning_rate=0.05,
                   subsample=0.8, colsample_bytree=0.8,
                   random_state=42, verbosity=0)
-
-# The failure value of a go-for-it is dominated by where the opponent takes
-# over. Teams rarely go for it deep in their own end, so the unconstrained
-# regressor extrapolates the failure cost the wrong way there. Constrain the
-# fail EPA/WPA to fall as yardline_100 rises (deeper own territory = worse).
-FAIL_MONOTONE = tuple(-1 if f == "yardline_100" else 0 for f in GO_FEATURES)
 
 KEEP_COLS = [
     "posteam", "posteam_type", "defteam", "side_of_field", "yardline_100",
@@ -221,61 +217,48 @@ def build_score_prob_tables(decisiondata, firsts):
 
 
 #------------------------------------------------------------------------------
-# Go-for-it models
+# Go-for-it conversion model
 #------------------------------------------------------------------------------
 """
-A logistic conversion-probability model (logistic for well-calibrated
-probabilities) and two tuned-XGBoost regressors for WPA under success and
-failure. The go EPA is no longer learned from the selection-biased go-attempt
-sample -- the app derives it from expected points by field position (the ep
-columns in the score tables) -- so only WPA is modelled here. wpa_fail carries
-the FAIL_MONOTONE constraint. Also writes lightweight empirical EPA/WPA fallback
-tables and the average/median yards gained on successful conversions by
-yards-to-go (reference only; the app spots a conversion at the line to gain + 1).
+Logistic model for the chance of converting a fourth down from the situation.
+Logistic is used over a tree model on purpose. A decision tool gets asked about
+any situation a user types in, including ones that are rare in the data (a tied
+game, fourth and 10 at midfield in the first half). Trees extrapolate badly
+there and return silly numbers; the smooth logistic curve stays believable
+across the whole input range and does not change which choice wins. The value of
+going is not learned from the go-attempt sample; the app builds it from the
+expected-points tables and the win-probability model, read at the field position
+the play would leave you in.
 """
-def _fit_regressor(X, y, label, monotone=None):
-    params = dict(XGB_PARAMS)
-    if monotone is not None:
-        params["monotone_constraints"] = monotone
-    kf = KFold(n_splits=5, shuffle=True, random_state=42)
-    r2 = cross_val_score(XGBRegressor(**params), X, y, cv=kf, scoring="r2").mean()
-    model = XGBRegressor(**params).fit(X, y)
-    print(f"    {label:16s} XGB(tuned)  R2={r2:+.4f}")
-    return model, float(r2)
-
-
-def build_go_models(go_attempts):
-    cleaned = go_attempts.dropna(
-        subset=GO_FEATURES + ["fourth_down_converted", "epa", "wpa", "yards_gained"])
+def build_conversion_model(go_attempts):
+    cleaned = go_attempts.dropna(subset=GO_FEATURES + ["fourth_down_converted"])
     X, y = cleaned[GO_FEATURES], cleaned["fourth_down_converted"]
-
     conv = LogisticRegression(fit_intercept=True, max_iter=100000, solver="liblinear")
     conv.fit(X, y)
     joblib.dump(conv, MODELS_DIR / "go_conversion_model.pkl")
     print(f"  go_conversion_model.pkl  (convert rate={y.mean():.3f}, n={len(cleaned)})")
+    return conv
 
-    success = cleaned[cleaned["fourth_down_converted"] == 1]
-    fail = cleaned[cleaned["fourth_down_converted"] == 0]
 
-    reg_meta = {}
-    for label, df in [("success", success), ("fail", fail)]:
-        mono = FAIL_MONOTONE if label == "fail" else None
-        model, r2 = _fit_regressor(df[GO_FEATURES], df["wpa"], f"wpa_{label}", mono)
-        joblib.dump(model, MODELS_DIR / f"wpa_{label}_model.pkl", compress=3)
-        reg_meta[f"wpa_{label}"] = {"model": "XGB_tuned", "cv_r2": r2}
-
-    for label, df in [("success", success), ("fail", fail)]:
-        avg = (df.groupby(["yardline_100", "ydstogo"])[["epa", "wpa"]]
-               .mean().reset_index())
-        avg.to_csv(DATA_DIR / f"{label}_epa_wpa_averages.csv", index=False)
-
-    gain = (success.groupby("ydstogo")["yards_gained"]
-            .agg(avg_success_gain="mean", median_success_gain="median", n="size")
-            .reset_index())
-    gain.to_csv(DATA_DIR / "go_success_gain.csv", index=False)
-    print(f"  go_success_gain.csv ({len(gain)} distances)  |  "
-          f"success/fail_epa_wpa_averages.csv")
-    return conv, reg_meta
+#------------------------------------------------------------------------------
+# Win probability model
+#------------------------------------------------------------------------------
+"""
+Win probability fit to nflverse wp over every regular-season play, from field
+position, score margin, and time left. The app reads our win probability at the
+game state each choice would produce (we keep the ball, we score, or the
+opponent takes over), so every option is valued the same way. Trained on all
+plays, not just fourth downs, so it is not biased by fourth-down decisions.
+"""
+def build_wp_model(data):
+    d = data[data["season_type"] == SEASON_TYPE].dropna(subset=WP_FEATURES + ["wp"])
+    kf = KFold(n_splits=5, shuffle=True, random_state=42)
+    r2 = cross_val_score(XGBRegressor(**XGB_PARAMS), d[WP_FEATURES], d["wp"],
+                         cv=kf, scoring="r2").mean()
+    model = XGBRegressor(**XGB_PARAMS).fit(d[WP_FEATURES], d["wp"])
+    joblib.dump(model, MODELS_DIR / "wp_model.pkl", compress=3)
+    print(f"  wp_model.pkl  (n={len(d)}, CV R2={r2:+.3f})")
+    return model
 
 
 #------------------------------------------------------------------------------
@@ -299,8 +282,10 @@ def main(seasons=SEASONS):
     build_fg_model(fg_attempts)
     print("Building next-score tables ...")
     build_score_prob_tables(decisiondata, firsts)
-    print("Building go-for-it models ...")
-    _, reg_meta = build_go_models(go_attempts)
+    print("Building conversion model ...")
+    build_conversion_model(go_attempts)
+    print("Building win probability model ...")
+    build_wp_model(data)
 
     meta = {
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -308,9 +293,9 @@ def main(seasons=SEASONS):
         "season_type": SEASON_TYPE,
         "kicker_anchor_yd": KICKER_ANCHOR,
         "go_features": GO_FEATURES,
+        "wp_features": WP_FEATURES,
         "counts": {"go": int(len(go_attempts)), "punt": int(len(punt_attempts)),
                    "fg": int(len(fg_attempts)), "firsts": int(len(firsts))},
-        "regressors": reg_meta,
     }
     (DATA_DIR / "meta.json").write_text(json.dumps(meta, indent=2))
 

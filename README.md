@@ -83,20 +83,27 @@ top of `train.py` and run it again.
 
 ### How each choice is valued
 
-* Go for it: a logistic model gives the chance of converting. The points value
-  comes from expected points by field position, built from every play in the
-  data, not just past fourth down tries. This matters because coaches rarely go
-  for it deep in their own end, so a model trained only on those tries would not
-  learn how costly a failure there really is. Win probability comes from tuned
-  XGBoost models. On a success the ball is spotted at the line to gain plus one
-  yard, counted as a touchdown if it reaches the end zone.
-* Field goal: a league make curve based on kick distance, then scaled by kicker
-  range so a kicker is treated as equally accurate at his own limit as the
-  league is at 65 yards. A make is worth 3 points. A miss and the win
-  probability values come from what actually happened on field goal tries.
-* Punt: outcomes averaged by field position from every punt in the data. Punter
-  range sets where the opponent starts, and that field position sets the value,
-  so a stronger punter makes punting look better.
+Every choice is judged the same way: by the game state it leaves you in. That is
+the standard method behind public fourth down charts, and it keeps go, field
+goal, and punt on one honest footing.
+
+For the points view, each choice is worth the expected points at the field
+position it produces. Going for it is the chance of converting times the points
+at the new spot, plus the chance of failing times the points you hand the
+opponent at the line of scrimmage. A field goal is the make chance times 3
+points, plus the miss chance times the points you hand the opponent at the spot
+of the kick. A punt is the points you hand the opponent where the ball is downed,
+which is why a stronger punter, pinning them deeper, improves it.
+
+For the win view, a win probability model reads your win chance at that same
+resulting state, with the score and clock folded in.
+
+The conversion chance comes from an XGBoost model. It is used over a plain
+logistic model because the effect of yards to go is far from a straight line: a
+fourth and 1 is much easier than a fourth and 3, and the tree model matches the
+real conversion rates by distance, where a logistic model flattens that edge. On
+a convert the ball is spotted at the line to gain plus one yard, or a touchdown
+if it reaches the end zone.
 
 ### Updating each year
 
@@ -126,10 +133,17 @@ files, so it does not pull data or train at run time.
 
 ### Things to keep in mind
 
-* The win probability numbers for the field goal and punt are averages by field
-  position, so they react less to score and clock than the go numbers do.
+* Use the expected points view as your default. It is the reliable one and it
+  matches public fourth down charts.
+* The win probability view is most useful late in a close game. Earlier on, win
+  probability barely moves across the field, so it is nearly flat and tends to
+  favor the safe choice. It also under-rates going for it when you are trailing,
+  because a simple win-probability lookup cannot see that punting there wastes
+  one of your few remaining possessions. Getting that fully right needs a much
+  heavier model than a free lightweight tool can carry.
 * Rare situations have less data behind them, so treat the edges with more
   caution.
-* The punter range effect on value is a reasonable estimate, not a direct
-  reading, since it maps a punt to the field position an average punt would
-  leave the opponent in.
+* On the points view a made field goal counts as a flat plus 3 points, while go
+  and punt are measured as a change in expected points, so the field goal number
+  sits on a slightly different footing than the other two. The win view does not
+  have this quirk.
