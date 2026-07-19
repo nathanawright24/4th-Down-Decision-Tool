@@ -143,7 +143,7 @@ def input_panel():
         _num("our_score", "Our score", 17, 0, 99),
         _num("their_score", "Their score", 21, 0, 99),
         _num("kicker_range", "Kicker range (FG yd)", 55, 20, 75),
-        _num("punter_range", "Punter range (yd)", 60, 30, 80),
+        _num("punter_range", "Punter range (yd)", 45, 30, 80),
     ])
 
 
@@ -191,9 +191,9 @@ def _delta(d):
 
 def build_card(key, o, metric, recommended):
     if metric == "epa":
-        val, unit = f"{o['epa']:+.2f}", "EPA"
+        val, unit = f"{o['ep_after']:+.2f}", "exp. points"
     else:
-        val, unit = f"{o['wpa'] * 100:+.1f}%", "WPA"
+        val, unit = f"{round(o['wp_after'] * 100)}%", "win prob"
     prob = (f"{_pct(o['prob'])} {o['prob_label']}"
             + (f" \u00b7 {round(o['kick_distance'])} yd" if "kick_distance" in o else "")
             if o["prob"] is not None else "\u00a0")
@@ -246,9 +246,11 @@ app.layout = html.Div(className="wrap", children=[
     html.Div(id="banner", className="banner"),
     html.Div(id="cards", className="cards"),
     html.Div(className="foot", children=[
-        "Next-score figures are the chance the next score of the half is by each team, "
-        "read at the resulting field position. Field-goal makes are valued at a literal "
-        "+3 points on the EPA scale; go and punt use change-in-expected-points.",
+        "The number on each card is the expected points of the situation that choice "
+        "leaves you in, or your win probability in the win view. The banner shows how "
+        "much better the top choice is than the next best. Next-score figures are the "
+        "chance the next score of the half is by each team, read at the resulting field "
+        "position. A made field goal is valued at a literal +3 points.",
     ]),
 ])
 
@@ -266,14 +268,18 @@ def update(yard_line, side, quarter, minutes, seconds, our_score, their_score,
         return d if v is None else v
     r = fd.decide(i(yard_line, 40), side or "opponent", i(quarter, 4),
                   i(minutes, 8), i(seconds, 0), i(our_score, 0), i(their_score, 0),
-                  i(ydstogo, 3), i(kicker_range, 55), i(punter_range, 60))
+                  i(ydstogo, 3), i(kicker_range, 55), i(punter_range, 45))
     rec = r["rec_epa"] if metric == "epa" else r["rec_wpa"]
-    o = r["options"][rec]
-    val = f"{o['epa']:+.2f} EPA" if metric == "epa" else f"{o['wpa'] * 100:+.1f}% WPA"
+    opts = r["options"]
+    key_val = (lambda k: opts[k]["ep_after"]) if metric == "epa" else (lambda k: opts[k]["wp_after"])
+    second = max((k for k in opts if k != rec), key=key_val)
+    edge = key_val(rec) - key_val(second)
+    edge_txt = (f"+{edge:.2f} pts over {NAMES[second].lower()}" if metric == "epa"
+                else f"+{edge * 100:.1f}% win prob over {NAMES[second].lower()}")
     banner = [html.Span(f"Recommendation \u00b7 {'expected points' if metric=='epa' else 'win probability'}",
                         className="lab"),
               html.Span(NAMES[rec], className="pick"),
-              html.Span(val, className="val disp")]
+              html.Span(edge_txt, className="val disp")]
     cards = [build_card(k, r["options"][k], metric, k == rec) for k in ("go", "fg", "punt")]
     return banner, cards
 

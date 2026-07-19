@@ -121,6 +121,7 @@ def _finalize(shares, ep_after, wp_after, base, ball, extra):
     out = dict(shares)
     out.update(our_score=our, opp_score=opp, no_score=max(0.0, 1.0 - our - opp),
                epa=float(ep_after - base["ep"]), wpa=float(wp_after - base["wp"]),
+               ep_after=float(ep_after), wp_after=float(wp_after),
                result_yl100=float(np.clip(ball, 0, 100)))
     out.update(extra)
     return out
