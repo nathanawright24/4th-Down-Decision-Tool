@@ -2,8 +2,9 @@ services:
   - type: web
     name: 4th-down-decision-tool
     env: python
+    plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python api.py
+    startCommand: gunicorn app:server --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10.12
+        value: 3.12.3
