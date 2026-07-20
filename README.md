@@ -78,7 +78,7 @@ free to host.
 ### The data
 
 Play by play from nflverse, pulled with `nfl_data_py`. Regular season only,
-2021 through 2025. To add a season, put the year in the `SEASONS` list at the
+2018 to 2019 and 2021 through 2025. To add a season, put the year in the `SEASONS` list at the
 top of `train.py` and run it again.
 
 ### How each choice is valued
