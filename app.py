@@ -33,14 +33,17 @@ app.index_string = """<!DOCTYPE html>
 <style>
 :root{--bg:#eef0f3;--card:#fff;--text:#0f1720;--muted:#5b6672;--border:#e1e4ea;
 --accent:#0e7c8b;--accent-ink:#fff;--green:#1a9750;--green-d:#0f6e3a;
---red:#d63b34;--red-d:#a52822;--gray:#c3c9d2;--field:#2f7d43;--field-ez:#245f34;}
+--red:#d63b34;--red-d:#a52822;--gray:#c3c9d2;--field:#2f7d43;--field-ez:#245f34;
+--dd-bg:#fff;--dd-text:#0f1720;--dd-hover:#eef0f3;--dd-border:#e1e4ea;}
 @media (prefers-color-scheme:dark){:root:not([data-theme]){--bg:#0d1117;--card:#171d26;
 --text:#e8edf3;--muted:#98a2b0;--border:#28303b;--accent:#25b3c3;--accent-ink:#04222a;
 --green:#37c46e;--green-d:#1f9a52;--red:#f0554f;--red-d:#c93b36;--gray:#39424e;
---field:#276b39;--field-ez:#1c4e2b;}}
+--field:#276b39;--field-ez:#1c4e2b;
+--dd-bg:#f2f5f8;--dd-text:#0b0f14;--dd-hover:#dde3ea;--dd-border:#9aa4b1;}}
 [data-theme=dark]{--bg:#0d1117;--card:#171d26;--text:#e8edf3;--muted:#98a2b0;
 --border:#28303b;--accent:#25b3c3;--accent-ink:#04222a;--green:#37c46e;--green-d:#1f9a52;
---red:#f0554f;--red-d:#c93b36;--gray:#39424e;--field:#276b39;--field-ez:#1c4e2b;}
+--red:#f0554f;--red-d:#c93b36;--gray:#39424e;--field:#276b39;--field-ez:#1c4e2b;
+--dd-bg:#f2f5f8;--dd-text:#0b0f14;--dd-hover:#dde3ea;--dd-border:#9aa4b1;}
 *{box-sizing:border-box;}
 body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;
 -webkit-font-smoothing:antialiased;transition:background .2s,color .2s;}
@@ -67,6 +70,26 @@ color:var(--muted);font-weight:600;margin:0;}
 .seg input{display:none;}
 .seg label:has(input:checked){background:var(--accent);color:var(--accent-ink);}
 .clock{display:flex;gap:6px;}.clock .q{flex:1.4;}.clock .m,.clock .s{flex:1;}
+/* The quarter picker is a dcc.Dropdown, which ships its own colors and ignores
+   the theme variables above. Pin it to a light control with near-black text in
+   both modes so the Q value and the option list stay easy to read in dark mode.
+   Selectors are unscoped on purpose: the class names are unique to the widget. */
+.dash-dropdown-trigger{background:var(--dd-bg)!important;color:var(--dd-text)!important;
+border:1px solid var(--dd-border)!important;border-radius:9px!important;
+min-height:42px!important;font-size:16px!important;}
+.dash-dropdown-value,.dash-dropdown-value-item{color:var(--dd-text)!important;
+font-size:16px!important;font-weight:600!important;}
+.dash-dropdown-placeholder{color:#5b6672!important;}
+.dash-dropdown-trigger-icon,.dash-dropdown-clear{color:var(--dd-text)!important;opacity:.85;}
+.dash-dropdown-content,.dash-dropdown-options{background:var(--dd-bg)!important;
+color:var(--dd-text)!important;border:1px solid var(--dd-border)!important;
+border-radius:9px!important;}
+.dash-dropdown-option{color:var(--dd-text)!important;background:transparent!important;
+font-size:15px!important;}
+.dash-dropdown-option:hover,.dash-dropdown-option[aria-selected=true]{
+background:var(--dd-hover)!important;color:var(--dd-text)!important;}
+.dash-dropdown-search,.dash-dropdown-search input{background:transparent!important;
+color:var(--dd-text)!important;font-size:16px!important;}
 .metatoggle{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
 .metatoggle .seg{max-width:220px;}
 .cap{color:var(--muted);font-size:12px;}
